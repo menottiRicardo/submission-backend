@@ -1,6 +1,24 @@
 const express = require("express");
 const app = express();
+const morgan = require("morgan");
+const cors = require('cors')
 app.use(express.json());
+app.use(cors())
+app.use(
+  morgan(
+    ":method :url :status :res[content-length] - :response-time ms :param",
+    {
+      skip: function (req, res) {
+        return req.method !== "POST";
+      },
+    }
+  )
+);
+
+morgan.token("param", function (req, res) {
+  return JSON.stringify(req.body);
+});
+
 let persons = [
   {
     id: 1,
@@ -80,7 +98,7 @@ app.post("/api/persons", (request, response) => {
       error: "number is missing",
     });
   }
-  
+
   persons = persons.concat(newPerson);
 
   response.json(newPerson);
@@ -91,7 +109,8 @@ const unknownEndpoint = (request, response) => {
 };
 
 app.use(unknownEndpoint);
-const PORT = 3001;
+const PORT = process.env.PORT || 3001
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
