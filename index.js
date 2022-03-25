@@ -18,6 +18,7 @@ app.use(
 morgan.token("param", function (req, res) {
   return JSON.stringify(req.body);
 });
+app.use(express.static('build'))
 
 let persons = [
   {
