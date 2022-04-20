@@ -47,7 +47,7 @@ app.get("/api/info", (request, response) => {
 app.get("/api/persons/:id", (request, response, next) => {
   Person.findById(request.params.id)
     .then((person) => {
-      console.log(person)
+      console.log(person);
       if (person) {
         response.json(person);
       } else {
@@ -64,8 +64,11 @@ app.put("/api/persons/:id", (request, response, next) => {
     number: body.number,
   };
 
-  console.log(person)
-  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+  Person.findByIdAndUpdate(request.params.id, person, {
+    new: true,
+    runValidators: true,
+    context: "query",
+  })
     .then((updatedperson) => {
       response.json(updatedperson);
     })
@@ -80,11 +83,9 @@ app.delete("/api/persons/:id", (request, response) => {
     .catch((error) => next(error));
 });
 
-
-
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", (request, response, next) => {
   const body = request.body;
-  console.log(body);
+  console.log("body", parseInt(body.number));
   if (body.name === undefined) {
     return response.status(400).json({ error: "name missing" });
   } else if (body.number === undefined) {
@@ -92,28 +93,21 @@ app.post("/api/persons", (request, response) => {
       error: "number is missing",
     });
   }
-  // const exist = persons.find(
-  //   (person) => person.name === newPerson.name
-  // );
-
-  // if (exist !== undefined) {
-  //   return response.status(400).json({
-  //     error: "name must be unique",
-  //   });
-  // } else if (!newPerson.number) {
-  //   return response.status(400).json({
-  //     error: "number is missing",
-  //   });
-  // }
 
   const person = new Person({
     name: body.name,
     number: body.number,
   });
 
-  person.save().then((savedperson) => {
-    response.json(savedperson);
-  });
+  const error = person.validateSync();
+  console.log("error", error.name);
+
+  person
+    .save()
+    .then((savedperson) => {
+      response.json(savedperson);
+    })
+    .catch((error) => next(error.name));
 });
 
 const unknownEndpoint = (request, response) => {
@@ -127,6 +121,8 @@ const errorHandler = (error, request, response, next) => {
 
   if (error.name === "CastError") {
     return response.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({ error: error.message });
   }
 
   next(error);
